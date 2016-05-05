@@ -19,6 +19,7 @@
     // Override point for customization after application launch.
     
     self.window.rootViewController = [[UINavigationController alloc] initWithRootViewController:self.window.rootViewController];
+    //添加测试文字
     
     
     return YES;
