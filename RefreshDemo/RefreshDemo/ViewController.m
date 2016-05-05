@@ -7,11 +7,11 @@
 //
 
 #import "ViewController.h"
-#import "NextViewController.h"
+#import "MJRefresh.h"
 
 @interface ViewController ()<UITableViewDelegate,UITableViewDataSource,UIScrollViewDelegate>{
     UILabel *_label;
-    UILabel *_statsLabel;
+//    UILabel *_statsLabel;
     BOOL _isRefreshing;
     UITableView *_tableView;
 }
@@ -26,33 +26,30 @@
     self.automaticallyAdjustsScrollViewInsets = NO;
     
     _tableView  = [[UITableView alloc] initWithFrame:CGRectMake(0, 64, 320, 568-64) style:UITableViewStyleGrouped];
-    _tableView.contentInset = UIEdgeInsetsMake(40, 0, 0, 0);
-    _tableView.scrollIndicatorInsets = UIEdgeInsetsMake(40, 0, 0, 0);
+    _tableView.contentInset = UIEdgeInsetsMake(40, 0, 0, 0);//表向下偏移 40
+    _tableView.scrollIndicatorInsets = UIEdgeInsetsMake(40, 0, 0, 0);//表右侧的 滑动条向下偏移40
     _tableView.delegate = self;
     _tableView.dataSource = self;
     [self.view addSubview:_tableView];
     [_tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"CellReuseIdentifier"];
     
     
-    UIView *headView = [[UIView alloc] initWithFrame:CGRectMake(0, -80, 200, 40)];
-    headView.backgroundColor = [UIColor redColor];
-    _tableView.backgroundView = headView;
-    
-    _label = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 320, 40)];
-    _label.text = @"我是头";
+    _label = [[UILabel alloc] initWithFrame:CGRectMake(0, 64, 320, 40)];
+    _label.text = @"俺是头,晓得不";
     _label.backgroundColor = [UIColor purpleColor];
     _label.textColor = [UIColor whiteColor];
     _label.textAlignment = NSTextAlignmentCenter;
-    [headView addSubview:_label];
+    [self.view addSubview:_label];
     
-    _statsLabel  = [[UILabel alloc] initWithFrame:CGRectMake(0, 40, 320, 40)];
-    _statsLabel.text = @"下拉刷新";
-    _statsLabel.backgroundColor = [UIColor orangeColor];
-    _statsLabel.textColor = [UIColor whiteColor];
-    _statsLabel.textAlignment = NSTextAlignmentCenter;
-    [headView addSubview:_statsLabel];
+    _tableView.mj_header = [MJRefreshNormalHeader headerWithRefreshingBlock:^{
+        NSLog(@"刷新中");
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [_tableView.mj_header endRefreshing];
+        });
+    }];
+    [_tableView.mj_header beginRefreshing];
+    [self.view bringSubviewToFront:_label];
 
-    // Do any additional setup after loading the view, typically from a nib.
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
@@ -84,46 +81,19 @@
     [sectionHeader addSubview:headLabel];
     return sectionHeader;
 }
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
-    [self.navigationController pushViewController:[NextViewController new] animated:YES];
-}
+
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView{
-    CGFloat headerHeight = _label.frame.size.height;
     CGPoint contentOffset = scrollView.contentOffset;
-    if (contentOffset.y >= 0 || contentOffset.y <= -40) {
-        _label.frame = CGRectMake(0, 0, 320, 40);
-        if (contentOffset.y < -100) {
-            _statsLabel.text = @"松手开始刷新";
-        } else if (contentOffset.y == -80) {
-            if (_isRefreshing) {
-                _isRefreshing = NO;
-                _statsLabel.text = @"正在刷新";
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    _statsLabel.text = @"下拉刷新";
-                    [_tableView setContentOffset:CGPointMake(0, -40) animated:YES];
-                });
-            }
-        } else {
-            _statsLabel.text = @"下拉刷新";
-        }
+    if (contentOffset.y <= -40) {
+        _label.frame = CGRectMake(0, 64, 320, 40);
     } else {
+        CGFloat headerHeight = _label.frame.size.height;
         CGRect rect = _label.frame;
-        rect.origin.y = -headerHeight-contentOffset.y;
+        rect.origin.y = 64-(headerHeight+contentOffset.y);
         _label.frame = rect;
     }
-    
 }
 
-- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate{
-    if (scrollView.contentOffset.y < -100) {
-        _isRefreshing = YES;
-       dispatch_async(dispatch_get_main_queue(), ^{
-           [_tableView setContentOffset:CGPointMake(0, -80) animated:YES];
-       });
-    } else {
-        _isRefreshing = NO;
-    }
-}
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
